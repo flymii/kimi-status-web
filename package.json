@@ -1,0 +1,24 @@
+{
+  "name": "kimi-status-web",
+  "version": "0.3.0",
+  "description": "Zero-dependency live web dashboard for Kimi Code sessions: tokens, cache hit rate, throughput and latency.",
+  "type": "module",
+  "bin": {
+    "kimi-status-web": "bin/kimi-status-web.mjs"
+  },
+  "scripts": {
+    "start": "node bin/kimi-status-web.mjs serve",
+    "line": "node bin/kimi-status-web.mjs snapshot --line"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "keywords": [
+    "kimi-code",
+    "plugin",
+    "status",
+    "dashboard",
+    "tokens"
+  ]
+}

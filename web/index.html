@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kimi Status</title>
+  <link rel="icon" href="./favicon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◈</span>
+      <span class="brand-name">Kimi Status</span>
+      <span class="live" id="live" data-state="connecting"><i></i><span id="live-text">连接中</span></span>
+    </div>
+    <div class="topbar-right">
+      <label class="picker">
+        <span>会话</span>
+        <select id="session-select"></select>
+      </label>
+      <button id="refresh" class="ghost" type="button">刷新</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero card">
+      <div class="hero-row" id="hero-row"></div>
+      <div class="hero-sub" id="hero-sub"></div>
+    </section>
+
+    <div class="empty" id="empty" hidden>
+      <p>还没有找到会话。</p>
+      <p class="muted">在任意目录启动一次 Kimi Code 会话，这里会自动出现实时指标。</p>
+    </div>
+
+    <section class="grid" id="grid" hidden>
+      <article class="card">
+        <h2>本回合</h2>
+        <dl class="kv" id="turn-kv"></dl>
+        <p class="prompt" id="turn-prompt"></p>
+      </article>
+
+      <article class="card">
+        <h2>吞吐</h2>
+        <div class="spark" id="spark"></div>
+        <dl class="kv" id="speed-kv"></dl>
+      </article>
+
+      <article class="card">
+        <h2>会话累计</h2>
+        <dl class="kv" id="total-kv"></dl>
+        <table class="table" id="model-table">
+          <thead><tr><th>模型</th><th class="num">入</th><th class="num">出</th><th class="num">调用</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Agent</h2>
+        <table class="table" id="agent-table">
+          <thead><tr><th>Agent</th><th>模型</th><th class="num">tok/s</th><th class="num">首字</th><th class="num">上下文</th><th class="num">出</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>工具调用</h2>
+        <ul class="feed" id="tool-feed"></ul>
+      </article>
+
+      <article class="card">
+        <h2>会话信息</h2>
+        <dl class="kv" id="session-kv"></dl>
+      </article>
+    </section>
+
+    <section class="card steps-card" id="steps-card" hidden>
+      <h2>逐步明细</h2>
+      <table class="table" id="step-table">
+        <thead><tr><th>时间</th><th>Agent</th><th class="num">入</th><th class="num">缓存读</th><th class="num">出</th><th class="num">tok/s</th><th class="num">首字</th><th class="num">流式</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="footer" id="footer"></footer>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

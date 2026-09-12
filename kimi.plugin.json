@@ -1,0 +1,29 @@
+{
+  "$schema": "https://kimi.com/schemas/kimi.plugin.schema.json",
+  "name": "kimi-status-web",
+  "version": "0.3.0",
+  "description": "Kimi Code 会话的本地 Web 实时状态面板：入/出 token、缓存命中率、吞吐 (tok/s)、首字延迟，随会话日志实时刷新。",
+  "keywords": [
+    "kimi-code",
+    "status",
+    "dashboard",
+    "web",
+    "metrics",
+    "tokens",
+    "cache"
+  ],
+  "license": "MIT",
+  "interface": {
+    "displayName": "Kimi Status Web",
+    "shortDescription": "浏览器里的实时状态栏：入/出 token、缓存命中率、tok/s、首字延迟",
+    "longDescription": "把 Kimi Code 会话的实时指标放进浏览器：入 token（含缓存读/写拆分）、出 token、缓存命中率、输出吞吐 (tok/s)、首字延迟 (TTFT)、回合耗时、工具调用流水，以及每个子 agent 的独立指标。\n\n数据直接来自会话日志 ~/.kimi-code/sessions/.../agents/*/wire.jsonl，只读本地文件，不联网、不改动会话内容。面板默认只监听 127.0.0.1，随会话自动启动，也可以在面板里切换历史会话。\n\n零依赖（仅用 Node 内置模块），需要 Node.js 18+。"
+  },
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "command": "node ./hooks/session-start.mjs",
+      "timeout": 5
+    }
+  ],
+  "commands": "./commands/"
+}
