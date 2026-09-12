@@ -27,7 +27,7 @@ const header = `// ==UserScript==
 // @name:en      Kimi Status Web
 // @namespace    kimi-status-web
 // @version      ${version}
-// @description  在 kimi web 会话页面右下角显示实时指标：入/出 token、缓存命中率、tok/s、首字延迟
+// @description  在 kimi web 的消息输入框下面显示实时指标：入/出 token、缓存命中率、tok/s、首字延迟
 // @description:en Live tokens, cache hit rate, throughput and TTFT inside the Kimi Code web UI
 // @author       kimi-status-web
 // @match        http://127.0.0.1/*

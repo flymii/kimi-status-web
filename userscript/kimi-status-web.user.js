@@ -2,8 +2,8 @@
 // @name         Kimi Status Web · kimi web 状态条
 // @name:en      Kimi Status Web
 // @namespace    kimi-status-web
-// @version      0.3.0
-// @description  在 kimi web 会话页面右下角显示实时指标：入/出 token、缓存命中率、tok/s、首字延迟
+// @version      0.3.1
+// @description  在 kimi web 的消息输入框下面显示实时指标：入/出 token、缓存命中率、tok/s、首字延迟
 // @description:en Live tokens, cache hit rate, throughput and TTFT inside the Kimi Code web UI
 // @author       kimi-status-web
 // @match        http://127.0.0.1/*
@@ -17,7 +17,7 @@
 // 指标来自本机 kimi-status-web 服务（默认 http://127.0.0.1:8710/）；
 // 换端口就改下面这行，或用 node scripts/build-userscript.mjs --port <port> 重新生成。
 window.__KIMI_STATUS_BASE = "http://127.0.0.1:8710/_kimi-status";
-window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so nothing here can leak into\n   the host app and nothing from the host app can reach in. */\n\n:host {\n  all: initial;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n.ksw {\n  --bg: rgba(17, 21, 29, 0.94);\n  --panel: #11151d;\n  --line: #262d39;\n  --text: #e6edf3;\n  --muted: #8b949e;\n  --dim: #6b7280;\n  --blue: #4fa8ff;\n  --green: #3fb950;\n  --amber: #e8a838;\n  position: fixed;\n  right: 16px;\n  bottom: 16px;\n  z-index: 2147483000;\n  font: 12px/1.45 ui-monospace, SFMono-Regular, \"JetBrains Mono\", Consolas, monospace;\n  color: var(--text);\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 8px;\n  max-width: min(560px, calc(100vw - 32px));\n}\n\n.ksw[data-theme=\"light\"] {\n  --bg: rgba(255, 255, 255, 0.96);\n  --panel: #ffffff;\n  --line: #d8dee6;\n  --text: #1f2328;\n  --muted: #57606a;\n  --dim: #6e7781;\n  --blue: #0969da;\n  --green: #1a7f37;\n}\n\n.ksw-bar {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 7px 12px;\n  background: var(--bg);\n  border: 1px solid var(--line);\n  border-radius: 999px;\n  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);\n  backdrop-filter: blur(8px);\n  cursor: pointer;\n  user-select: none;\n  white-space: nowrap;\n  overflow: hidden;\n}\n\n.ksw-bar:hover {\n  border-color: #3a4454;\n}\n\n.ksw-dot {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--dim);\n  flex: none;\n}\n\n.ksw[data-live=\"open\"] .ksw-dot {\n  background: var(--green);\n  box-shadow: 0 0 7px rgba(63, 185, 80, 0.7);\n}\n\n.ksw[data-live=\"closed\"] .ksw-dot {\n  background: var(--amber);\n}\n\n.ksw-chip {\n  display: inline-flex;\n  align-items: baseline;\n  gap: 5px;\n}\n\n.ksw-chip .label {\n  color: var(--muted);\n}\n\n.ksw-chip .value {\n  font-variant-numeric: tabular-nums;\n  color: var(--text);\n}\n\n.ksw-chip.cache .value { color: var(--green); }\n.ksw-chip.tps .value { color: var(--blue); }\n.ksw-chip.tps .unit { color: var(--blue); font-size: 11px; }\n.ksw-chip.ttft .value { color: var(--green); }\n.ksw-sep { color: #3a4252; }\n.ksw[data-theme=\"light\"] .ksw-sep { color: #c3ccd6; }\n.ksw-caret { color: var(--dim); margin-left: 2px; }\n\n.ksw-card {\n  background: var(--bg);\n  border: 1px solid var(--line);\n  border-radius: 12px;\n  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);\n  backdrop-filter: blur(8px);\n  padding: 12px 14px;\n  width: 340px;\n  max-height: min(60vh, 520px);\n  overflow: auto;\n}\n\n.ksw-card[hidden] { display: none; }\n\n.ksw-section + .ksw-section {\n  margin-top: 10px;\n  padding-top: 10px;\n  border-top: 1px solid var(--line);\n}\n\n.ksw-title {\n  color: var(--muted);\n  font-size: 10.5px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  margin-bottom: 6px;\n}\n\n.ksw-row {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 1.5px 0;\n}\n\n.ksw-row .k { color: var(--muted); }\n.ksw-row .v { font-variant-numeric: tabular-nums; text-align: right; }\n.ksw-row .v.good { color: var(--green); }\n.ksw-row .v.info { color: var(--blue); }\n\n.ksw-prompt {\n  margin-top: 8px;\n  padding: 6px 8px;\n  background: rgba(127, 127, 127, 0.1);\n  border-radius: 6px;\n  color: var(--muted);\n  font-size: 11px;\n  max-height: 60px;\n  overflow: hidden;\n}\n\n.ksw-spark {\n  height: 42px;\n  margin: 6px 0 8px;\n}\n\n.ksw-spark svg { width: 100%; height: 100%; display: block; }\n\n.ksw-links {\n  display: flex;\n  gap: 12px;\n  margin-top: 10px;\n  padding-top: 9px;\n  border-top: 1px solid var(--line);\n  font-size: 11px;\n}\n\n.ksw-links a {\n  color: var(--blue);\n  text-decoration: none;\n  cursor: pointer;\n}\n\n.ksw-links a:hover { text-decoration: underline; }\n.ksw-agents { font-size: 11px; }\n.ksw-agents .ksw-row .k { color: var(--text); }\n";
+window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so nothing here can leak into\n   the host app and nothing from the host app can reach in.\n\n   The bar itself is box-less — plain status text pinned under the message\n   composer. Only the expanded card (opened on click) keeps a panel surface so\n   it stays readable over the chat. */\n\n:host {\n  all: initial;\n  display: block;\n  flex: none;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n/* In flow: the placement code inserts the host as the composer box's next\n   sibling, so the composer above it gets pushed up. Falls back to a fixed\n   corner when the page has no composer. */\n.ksw {\n  --text: #e6edf3;\n  --muted: #8b949e;\n  --dim: #6b7280;\n  --blue: #4fa8ff;\n  --green: #3fb950;\n  --amber: #e8a838;\n  --panel: rgba(17, 21, 29, 0.96);\n  --line: #262d39;\n\n  position: relative;\n  z-index: 3;\n  margin: 6px 0 0 18px;\n  font: 12px/1.45 ui-monospace, SFMono-Regular, \"JetBrains Mono\", Consolas, monospace;\n  color: var(--muted);\n  display: block;\n  max-width: calc(100vw - 24px);\n}\n\n.ksw[data-theme=\"light\"] {\n  --text: #1f2328;\n  --muted: #57606a;\n  --dim: #6e7781;\n  --blue: #0969da;\n  --green: #1a7f37;\n  --amber: #9a6700;\n  --panel: rgba(255, 255, 255, 0.97);\n  --line: #d8dee6;\n}\n\n.ksw-bar {\n  display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  padding: 0;\n  background: none;\n  border: 0;\n  box-shadow: none;\n  color: inherit;\n  cursor: pointer;\n  user-select: none;\n  white-space: nowrap;\n  overflow: hidden;\n  opacity: 0.92;\n}\n\n.ksw-bar:hover {\n  opacity: 1;\n}\n\n.ksw-bar:hover .ksw-chip .value {\n  color: var(--text);\n}\n\n.ksw-dot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dim);\n  flex: none;\n}\n\n.ksw[data-live=\"open\"] .ksw-dot {\n  background: var(--green);\n  box-shadow: 0 0 6px rgba(63, 185, 80, 0.7);\n}\n\n.ksw[data-live=\"closed\"] .ksw-dot {\n  background: var(--amber);\n}\n\n.ksw-chip {\n  display: inline-flex;\n  align-items: baseline;\n  gap: 4px;\n}\n\n.ksw-chip .label {\n  color: var(--dim);\n}\n\n.ksw-chip .value {\n  color: var(--text);\n  font-variant-numeric: tabular-nums;\n}\n\n.ksw-chip.cache .value { color: var(--green); }\n.ksw-chip.tps .value { color: var(--blue); }\n.ksw-chip.tps .unit { color: var(--blue); font-size: 11px; }\n.ksw-chip.ttft .value { color: var(--green); }\n.ksw-sep { color: var(--dim); }\n.ksw-caret { color: var(--dim); }\n\n/* Opens above the composer box (offset set by the placement code) so the panel\n   covers the conversation, never the input area. */\n.ksw-card {\n  position: absolute;\n  bottom: calc(100% + var(--ksw-card-offset, 8px));\n  left: 0;\n  width: min(340px, 100%);\n  max-height: min(60vh, 520px);\n  overflow: auto;\n  padding: 12px 14px;\n  background: var(--panel);\n  border: 1px solid var(--line);\n  border-radius: 12px;\n  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);\n  backdrop-filter: blur(8px);\n  color: var(--text);\n}\n\n.ksw-card[hidden] { display: none; }\n\n.ksw-section + .ksw-section {\n  margin-top: 10px;\n  padding-top: 10px;\n  border-top: 1px solid var(--line);\n}\n\n.ksw-title {\n  color: var(--muted);\n  font-size: 10.5px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  margin-bottom: 6px;\n}\n\n.ksw-row {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 1.5px 0;\n}\n\n.ksw-row .k { color: var(--muted); }\n.ksw-row .v { font-variant-numeric: tabular-nums; text-align: right; }\n.ksw-row .v.good { color: var(--green); }\n.ksw-row .v.info { color: var(--blue); }\n\n.ksw-prompt {\n  margin-top: 8px;\n  padding: 6px 8px;\n  background: rgba(127, 127, 127, 0.1);\n  border-radius: 6px;\n  color: var(--muted);\n  font-size: 11px;\n  max-height: 60px;\n  overflow: hidden;\n}\n\n.ksw-spark {\n  height: 42px;\n  margin: 6px 0 8px;\n}\n\n.ksw-spark svg { width: 100%; height: 100%; display: block; }\n\n.ksw-links {\n  display: flex;\n  gap: 12px;\n  margin-top: 10px;\n  padding-top: 9px;\n  border-top: 1px solid var(--line);\n  font-size: 11px;\n}\n\n.ksw-links a {\n  color: var(--blue);\n  text-decoration: none;\n  cursor: pointer;\n}\n\n.ksw-links a:hover { text-decoration: underline; }\n.ksw-agents { font-size: 11px; }\n.ksw-agents .ksw-row .k { color: var(--text); }\n";
 
 // The status bar that lives inside the Kimi Code web UI, delivered as a
 // userscript. It renders in a shadow root so it cannot disturb (or be disturbed
@@ -385,7 +385,148 @@ window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so n
     /* older engines */
   }
 
+  // ---- mount: a sibling right after the message composer --------------------
+  // The bar is a real element in the page flow, so the composer above it gets
+  // pushed up rather than covered. The host app re-renders the composer as you
+  // type, which can drop foreign nodes — a cheap watchdog puts it back.
+  const COMPOSER_SELECTORS = [
+    '.ProseMirror',
+    '.ui-textarea',
+    '[contenteditable="true"]',
+    'textarea',
+    '[role="textbox"]',
+  ];
+  const FALLBACK = { right: 16, bottom: 16 };
+  let composerEl = null;
+  let boxEl = null;
+  let lastCheck = 0;
+
+  function bottomMostVisible(elements) {
+    let best = null;
+    let bestBottom = -Infinity;
+    for (const el of elements) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 40 || rect.height < 8) continue;
+      if (rect.bottom > bestBottom) {
+        bestBottom = rect.bottom;
+        best = el;
+      }
+    }
+    return best;
+  }
+
+  function findComposer() {
+    if (composerEl && composerEl.isConnected) {
+      const rect = composerEl.getBoundingClientRect();
+      if (rect.width >= 40 && rect.height >= 8) return composerEl;
+    }
+    composerEl = null;
+    for (const selector of COMPOSER_SELECTORS) {
+      const el = bottomMostVisible(document.querySelectorAll(selector));
+      if (el) {
+        composerEl = el;
+        return el;
+      }
+    }
+    return null;
+  }
+
+  /** Nearest ancestor drawn as a box: a border or fill, plus some rounding. */
+  function findBox(input) {
+    let el = input;
+    let rect = el.getBoundingClientRect();
+    for (let depth = 0; depth < 6 && el.parentElement; depth += 1) {
+      const parent = el.parentElement;
+      if (parent === document.body) break;
+      const parentRect = parent.getBoundingClientRect();
+      if (parentRect.width > rect.width + 120) break;
+      if (parentRect.height > Math.max(rect.height * 4, 360)) break;
+      el = parent;
+      rect = parentRect;
+      const style = getComputedStyle(parent);
+      const borderWidth = parseFloat(style.borderTopWidth)
+        + parseFloat(style.borderBottomWidth)
+        + parseFloat(style.borderLeftWidth)
+        + parseFloat(style.borderRightWidth);
+      const background = style.backgroundColor || '';
+      const painted = background !== '' && background !== 'transparent'
+        && background !== 'rgba(0, 0, 0, 0)';
+      const radius = parseFloat(style.borderTopLeftRadius) || 0;
+      if ((borderWidth > 0 || painted) && radius > 0) return parent;
+    }
+    return el;
+  }
+
+  /** Already sitting where it belongs, right after the composer box? */
+  function anchored() {
+    return Boolean(boxEl && boxEl.isConnected && boxEl.parentElement
+      && host.parentElement === boxEl.parentElement
+      && host.previousElementSibling === boxEl);
+  }
+
+  function updateCardOffset() {
+    if (!boxEl || !boxEl.isConnected) return;
+    const height = Math.round(boxEl.getBoundingClientRect().height);
+    // The card opens above the composer, never over the input area.
+    root.style.setProperty('--ksw-card-offset', `${Math.max(height + 14, 8)}px`);
+  }
+
+  function fallbackPlacement() {
+    if (host.parentElement !== document.body) document.body.appendChild(host);
+    root.style.position = 'fixed';
+    root.style.right = `${FALLBACK.right}px`;
+    root.style.bottom = `${FALLBACK.bottom}px`;
+    root.style.left = 'auto';
+    root.style.top = 'auto';
+    root.style.width = 'auto';
+    root.style.margin = '0';
+    root.style.setProperty('--ksw-card-offset', '8px');
+    boxEl = null;
+  }
+
+  function mount() {
+    if (anchored()) {
+      updateCardOffset();
+      return;
+    }
+    const input = findComposer();
+    const box = input ? findBox(input) : null;
+    if (!box || !box.parentElement) {
+      fallbackPlacement();
+      return;
+    }
+    root.style.position = 'relative';
+    root.style.right = 'auto';
+    root.style.bottom = 'auto';
+    root.style.left = 'auto';
+    root.style.top = 'auto';
+    root.style.width = 'auto';
+    root.style.margin = '';
+    boxEl = box;
+    if (host.parentElement !== box.parentElement || host.previousElementSibling !== box) {
+      box.parentElement.insertBefore(host, box.nextSibling);
+    }
+    updateCardOffset();
+  }
+
+  function scheduleMount() {
+    const now = Date.now();
+    if (now - lastCheck < 300) return;
+    lastCheck = now;
+    mount();
+  }
+
   state.sessionId = sessionFromLocation();
   connect();
   state.timer = setInterval(syncSession, 4000);
+  mount();
+  window.addEventListener('resize', scheduleMount);
+  setInterval(mount, 1000);
+  try {
+    new MutationObserver(() => {
+      if (!anchored()) scheduleMount();
+    }).observe(document.body, { childList: true, subtree: true });
+  } catch {
+    /* older engines */
+  }
 })();

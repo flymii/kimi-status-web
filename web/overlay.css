@@ -1,71 +1,80 @@
 /* Overlay styles. Loaded inside a shadow root, so nothing here can leak into
-   the host app and nothing from the host app can reach in. */
+   the host app and nothing from the host app can reach in.
+
+   The bar itself is box-less — plain status text pinned under the message
+   composer. Only the expanded card (opened on click) keeps a panel surface so
+   it stays readable over the chat. */
 
 :host {
   all: initial;
+  display: block;
+  flex: none;
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* In flow: the placement code inserts the host as the composer box's next
+   sibling, so the composer above it gets pushed up. Falls back to a fixed
+   corner when the page has no composer. */
 .ksw {
-  --bg: rgba(17, 21, 29, 0.94);
-  --panel: #11151d;
-  --line: #262d39;
   --text: #e6edf3;
   --muted: #8b949e;
   --dim: #6b7280;
   --blue: #4fa8ff;
   --green: #3fb950;
   --amber: #e8a838;
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 2147483000;
+  --panel: rgba(17, 21, 29, 0.96);
+  --line: #262d39;
+
+  position: relative;
+  z-index: 3;
+  margin: 6px 0 0 18px;
   font: 12px/1.45 ui-monospace, SFMono-Regular, "JetBrains Mono", Consolas, monospace;
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  max-width: min(560px, calc(100vw - 32px));
+  color: var(--muted);
+  display: block;
+  max-width: calc(100vw - 24px);
 }
 
 .ksw[data-theme="light"] {
-  --bg: rgba(255, 255, 255, 0.96);
-  --panel: #ffffff;
-  --line: #d8dee6;
   --text: #1f2328;
   --muted: #57606a;
   --dim: #6e7781;
   --blue: #0969da;
   --green: #1a7f37;
+  --amber: #9a6700;
+  --panel: rgba(255, 255, 255, 0.97);
+  --line: #d8dee6;
 }
 
 .ksw-bar {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(8px);
+  gap: 7px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: inherit;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
   overflow: hidden;
+  opacity: 0.92;
 }
 
 .ksw-bar:hover {
-  border-color: #3a4454;
+  opacity: 1;
+}
+
+.ksw-bar:hover .ksw-chip .value {
+  color: var(--text);
 }
 
 .ksw-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--dim);
   flex: none;
@@ -73,7 +82,7 @@
 
 .ksw[data-live="open"] .ksw-dot {
   background: var(--green);
-  box-shadow: 0 0 7px rgba(63, 185, 80, 0.7);
+  box-shadow: 0 0 6px rgba(63, 185, 80, 0.7);
 }
 
 .ksw[data-live="closed"] .ksw-dot {
@@ -83,36 +92,41 @@
 .ksw-chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 5px;
+  gap: 4px;
 }
 
 .ksw-chip .label {
-  color: var(--muted);
+  color: var(--dim);
 }
 
 .ksw-chip .value {
-  font-variant-numeric: tabular-nums;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .ksw-chip.cache .value { color: var(--green); }
 .ksw-chip.tps .value { color: var(--blue); }
 .ksw-chip.tps .unit { color: var(--blue); font-size: 11px; }
 .ksw-chip.ttft .value { color: var(--green); }
-.ksw-sep { color: #3a4252; }
-.ksw[data-theme="light"] .ksw-sep { color: #c3ccd6; }
-.ksw-caret { color: var(--dim); margin-left: 2px; }
+.ksw-sep { color: var(--dim); }
+.ksw-caret { color: var(--dim); }
 
+/* Opens above the composer box (offset set by the placement code) so the panel
+   covers the conversation, never the input area. */
 .ksw-card {
-  background: var(--bg);
+  position: absolute;
+  bottom: calc(100% + var(--ksw-card-offset, 8px));
+  left: 0;
+  width: min(340px, 100%);
+  max-height: min(60vh, 520px);
+  overflow: auto;
+  padding: 12px 14px;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(8px);
-  padding: 12px 14px;
-  width: 340px;
-  max-height: min(60vh, 520px);
-  overflow: auto;
+  color: var(--text);
 }
 
 .ksw-card[hidden] { display: none; }

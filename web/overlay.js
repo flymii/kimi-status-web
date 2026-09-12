@@ -364,7 +364,148 @@
     /* older engines */
   }
 
+  // ---- mount: a sibling right after the message composer --------------------
+  // The bar is a real element in the page flow, so the composer above it gets
+  // pushed up rather than covered. The host app re-renders the composer as you
+  // type, which can drop foreign nodes — a cheap watchdog puts it back.
+  const COMPOSER_SELECTORS = [
+    '.ProseMirror',
+    '.ui-textarea',
+    '[contenteditable="true"]',
+    'textarea',
+    '[role="textbox"]',
+  ];
+  const FALLBACK = { right: 16, bottom: 16 };
+  let composerEl = null;
+  let boxEl = null;
+  let lastCheck = 0;
+
+  function bottomMostVisible(elements) {
+    let best = null;
+    let bestBottom = -Infinity;
+    for (const el of elements) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 40 || rect.height < 8) continue;
+      if (rect.bottom > bestBottom) {
+        bestBottom = rect.bottom;
+        best = el;
+      }
+    }
+    return best;
+  }
+
+  function findComposer() {
+    if (composerEl && composerEl.isConnected) {
+      const rect = composerEl.getBoundingClientRect();
+      if (rect.width >= 40 && rect.height >= 8) return composerEl;
+    }
+    composerEl = null;
+    for (const selector of COMPOSER_SELECTORS) {
+      const el = bottomMostVisible(document.querySelectorAll(selector));
+      if (el) {
+        composerEl = el;
+        return el;
+      }
+    }
+    return null;
+  }
+
+  /** Nearest ancestor drawn as a box: a border or fill, plus some rounding. */
+  function findBox(input) {
+    let el = input;
+    let rect = el.getBoundingClientRect();
+    for (let depth = 0; depth < 6 && el.parentElement; depth += 1) {
+      const parent = el.parentElement;
+      if (parent === document.body) break;
+      const parentRect = parent.getBoundingClientRect();
+      if (parentRect.width > rect.width + 120) break;
+      if (parentRect.height > Math.max(rect.height * 4, 360)) break;
+      el = parent;
+      rect = parentRect;
+      const style = getComputedStyle(parent);
+      const borderWidth = parseFloat(style.borderTopWidth)
+        + parseFloat(style.borderBottomWidth)
+        + parseFloat(style.borderLeftWidth)
+        + parseFloat(style.borderRightWidth);
+      const background = style.backgroundColor || '';
+      const painted = background !== '' && background !== 'transparent'
+        && background !== 'rgba(0, 0, 0, 0)';
+      const radius = parseFloat(style.borderTopLeftRadius) || 0;
+      if ((borderWidth > 0 || painted) && radius > 0) return parent;
+    }
+    return el;
+  }
+
+  /** Already sitting where it belongs, right after the composer box? */
+  function anchored() {
+    return Boolean(boxEl && boxEl.isConnected && boxEl.parentElement
+      && host.parentElement === boxEl.parentElement
+      && host.previousElementSibling === boxEl);
+  }
+
+  function updateCardOffset() {
+    if (!boxEl || !boxEl.isConnected) return;
+    const height = Math.round(boxEl.getBoundingClientRect().height);
+    // The card opens above the composer, never over the input area.
+    root.style.setProperty('--ksw-card-offset', `${Math.max(height + 14, 8)}px`);
+  }
+
+  function fallbackPlacement() {
+    if (host.parentElement !== document.body) document.body.appendChild(host);
+    root.style.position = 'fixed';
+    root.style.right = `${FALLBACK.right}px`;
+    root.style.bottom = `${FALLBACK.bottom}px`;
+    root.style.left = 'auto';
+    root.style.top = 'auto';
+    root.style.width = 'auto';
+    root.style.margin = '0';
+    root.style.setProperty('--ksw-card-offset', '8px');
+    boxEl = null;
+  }
+
+  function mount() {
+    if (anchored()) {
+      updateCardOffset();
+      return;
+    }
+    const input = findComposer();
+    const box = input ? findBox(input) : null;
+    if (!box || !box.parentElement) {
+      fallbackPlacement();
+      return;
+    }
+    root.style.position = 'relative';
+    root.style.right = 'auto';
+    root.style.bottom = 'auto';
+    root.style.left = 'auto';
+    root.style.top = 'auto';
+    root.style.width = 'auto';
+    root.style.margin = '';
+    boxEl = box;
+    if (host.parentElement !== box.parentElement || host.previousElementSibling !== box) {
+      box.parentElement.insertBefore(host, box.nextSibling);
+    }
+    updateCardOffset();
+  }
+
+  function scheduleMount() {
+    const now = Date.now();
+    if (now - lastCheck < 300) return;
+    lastCheck = now;
+    mount();
+  }
+
   state.sessionId = sessionFromLocation();
   connect();
   state.timer = setInterval(syncSession, 4000);
+  mount();
+  window.addEventListener('resize', scheduleMount);
+  setInterval(mount, 1000);
+  try {
+    new MutationObserver(() => {
+      if (!anchored()) scheduleMount();
+    }).observe(document.body, { childList: true, subtree: true });
+  } catch {
+    /* older engines */
+  }
 })();
