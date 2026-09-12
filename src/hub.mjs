@@ -7,7 +7,7 @@ import { SessionTracker } from './session-tracker.mjs';
  * command, and the userscript. One tracker cache, one follow target, one
  * snapshot builder.
  */
-export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashboard' }) {
+export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashboard', quota = null }) {
   const startedAt = Date.now();
   const trackers = new Map();
   let followedId = null;
@@ -73,6 +73,18 @@ export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashbo
     };
   }
 
+  function withServer(snapshot) {
+    return { ...snapshot, server: serverInfo() };
+  }
+
+  function withQuota(snapshot) {
+    if (!quota) return snapshot;
+    // Quota refreshes on its own TTL, routed by the model this session is
+    // calling; it never blocks the tick on the network.
+    Promise.resolve(quota.touch(snapshot.headline?.model || null)).catch(() => {});
+    return { ...snapshot, quota: quota.view() };
+  }
+
   function emptySnapshot() {
     return {
       ok: true,
@@ -87,6 +99,7 @@ export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashbo
       steps: [],
       tools: [],
       window: {},
+      quota: quota ? quota.view() : null,
     };
   }
 
@@ -96,7 +109,7 @@ export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashbo
     if (!tracker) return { changed: true, snapshot: emptySnapshot() };
     try {
       const { changed, snapshot } = tracker.poll();
-      return { changed, snapshot: { ...snapshot, server: serverInfo() } };
+      return { changed, snapshot: withServer(withQuota(snapshot)) };
     } catch (error) {
       log(`poll failed: ${error && error.message}`);
       return { changed: false, snapshot: emptySnapshot() };
@@ -109,7 +122,7 @@ export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashbo
     if (!tracker) return emptySnapshot();
     try {
       const { snapshot } = tracker.poll();
-      return { ...snapshot, server: serverInfo() };
+      return withServer(withQuota(snapshot));
     } catch (error) {
       log(`poll failed: ${error && error.message}`);
       return emptySnapshot();
@@ -125,5 +138,6 @@ export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashbo
     tick,
     snapshotFor,
     serverInfo,
+    refreshQuota: () => (quota ? quota.refreshLast() : Promise.resolve(null)),
   };
 }

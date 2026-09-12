@@ -135,6 +135,17 @@ export function createApiRoutes({ paths, hub, log = () => {} }) {
         sendJson(res, 200, { ok: true, following: hub.following || 'auto' }, cors);
         return true;
       }
+      case '/api/quota/refresh': {
+        // Bar click asks for fresh quota now; the new snapshot is broadcast
+        // to every stream client as a side effect.
+        Promise.resolve(hub.refreshQuota())
+          .catch(() => null)
+          .then(() => {
+            lastSnapshot = tick();
+            sendJson(res, 200, { ok: true, quota: lastSnapshot ? lastSnapshot.quota : null }, cors);
+          });
+        return true;
+      }
       case '/api/stream':
         if (url.searchParams.get('session')) hub.setFollowing(url.searchParams.get('session'));
         openStream(req, res, cors);

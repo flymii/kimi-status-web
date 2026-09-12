@@ -117,6 +117,26 @@
     const minutes = Math.floor(ms / 60000);
     return `${minutes}m${String(Math.round((ms % 60000) / 1000)).padStart(2, '0')}s`;
   };
+  const fmtResetIn = (ms) => {
+    if (!Number.isFinite(ms)) return '—';
+    const delta = ms - Date.now();
+    if (delta <= 0) return '0m';
+    const minutes = Math.ceil(delta / 60000);
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    const mins = minutes % 60;
+    if (days > 0) return `${days}d${hours}h`;
+    if (hours > 0) return `${hours}h${mins}m`;
+    return `${mins}m`;
+  };
+  const quotaCls = (usedPct) => (Number.isFinite(usedPct) && usedPct >= 75 ? 'warn' : '');
+  const fmtPct = (value) => (Number.isFinite(value) ? `${Math.round(value)}%` : '—');
+  const fmtMoney = (balance) => {
+    if (!balance || !Number.isFinite(balance.total)) return '—';
+    const symbols = { CNY: '¥', USD: '$' };
+    const symbol = symbols[balance.currency] || `${balance.currency} `;
+    return `${symbol}${balance.total.toFixed(2)}`;
+  };
   const chip = (label, value, className = '', unit = '') => `<span class="ksw-chip ${className}">`
     + `<span class="label">${esc(label)}</span><span class="value">${esc(value)}</span>`
     + (unit ? `<span class="unit">${esc(unit)}</span>` : '')
@@ -166,15 +186,53 @@
       chip('↑', fmtRate(head.tps), 'tps', 'tok/s'),
       chip('⚡', fmtDuration(head.ttftMs), 'ttft'),
     ];
+    const quota = snapshot.quota;
+    if (quota && quota.ok === true) {
+      if (quota.source === 'deepseek') {
+        parts.push('<span class="ksw-quota-group">'
+          + chip('余额', fmtMoney(quota.balances && quota.balances[0]))
+          + '</span>');
+      } else {
+        // Every window gets its own sub-block: window label, remaining share,
+        // reset countdown — e.g. "7d 88% 5d2h · 5h 41% 1h9m".
+        const qGroup = (label, usedPct, resetAt) => `<span class="ksw-q">${esc(label)}`
+          + ` <span class="v ${quotaCls(usedPct)}">${fmtPct(usedPct)}</span>`
+          + ` <span class="r">${fmtResetIn(resetAt)}</span></span>`;
+        const groups = [];
+        if (quota.weekly) groups.push(qGroup(quota.weekly.window || '7d', quota.weekly.usedPct, quota.weekly.resetAt));
+        for (const window_ of quota.windows || []) {
+          groups.push(qGroup(window_.window || '滚动', window_.usedPct, window_.resetAt));
+        }
+        if (groups.length) {
+          parts.push('<span class="ksw-quota-group">'
+            + groups.join('<span class="ksw-sep">·</span>')
+            + '</span>');
+        }
+      }
+    }
     chips.innerHTML = parts.join('<span class="ksw-sep">·</span>');
     const cacheLine = Number.isFinite(head.cacheRate)
       ? `缓存命中 ${fmtPercent(head.cacheRate)}：缓存读 ${fmtTokens(head.cacheRead)} / 输入 ${fmtTokens(head.input)}，未缓存 ${fmtTokens(head.inputOther)}`
       : '';
+    const quotaLines = quota && quota.ok === true
+      ? (quota.source === 'deepseek'
+        ? (quota.balances || []).map((balance) =>
+          `DeepSeek ${balance.currency} 余额 ${fmtMoney(balance)}`)
+        : [
+          quota.weekly ? `${quota.weekly.window || '7d'}额度 已用 ${fmtPct(quota.weekly.usedPct)} · 重置 ${fmtResetIn(quota.weekly.resetAt)}` : '',
+          ...(quota.windows || []).map((window_) =>
+            `${window_.window || '滚动'}窗口 已用 ${fmtPct(window_.usedPct)} · 重置 ${fmtResetIn(window_.resetAt)}`),
+          quota.extra && Number.isFinite(quota.extra.balanceCents)
+            ? `加油包 ¥${(quota.extra.balanceCents / 100).toFixed(2)}`
+            : '',
+        ].filter(Boolean))
+      : [];
     bar.title = [
       snapshot.session.title || snapshot.session.id,
       snapshot.session.cwd || '',
       `模型 ${head.model || '—'} · 上下文 ${fmtTokens(head.contextTokens)}`,
       cacheLine,
+      ...quotaLines,
     ].filter(Boolean).join('\n');
   }
 
@@ -197,6 +255,36 @@
   function row(key, value, cls = '') {
     return `<div class="ksw-row"><span class="k">${esc(key)}</span>`
       + `<span class="v ${cls}">${esc(value)}</span></div>`;
+  }
+
+  function renderQuotaSection(quota) {
+    if (!quota || quota.ok !== true) return '';
+    if (quota.source === 'deepseek') {
+      const lines = (quota.balances || []).map((balance) => row(balance.currency, fmtMoney(balance)));
+      if (quota.available === false) lines.unshift(row('状态', '不可用', 'warn'));
+      if (!lines.length) return '';
+      return `<div class="ksw-section">
+        <div class="ksw-title">DeepSeek 余额</div>
+        ${lines.join('')}
+      </div>`;
+    }
+    const lines = [];
+    if (quota.weekly) {
+      lines.push(row(`${quota.weekly.window || '7d'}额度`, `已用 ${fmtPct(quota.weekly.usedPct)}`, quotaCls(quota.weekly.usedPct)));
+      lines.push(row('重置', fmtResetIn(quota.weekly.resetAt)));
+    }
+    for (const window_ of quota.windows || []) {
+      lines.push(row(`${window_.window || '滚动'}窗口`, `已用 ${fmtPct(window_.usedPct)}`, quotaCls(window_.usedPct)));
+      lines.push(row('重置', fmtResetIn(window_.resetAt)));
+    }
+    if (quota.extra && Number.isFinite(quota.extra.balanceCents)) {
+      lines.push(row('加油包', `¥${(quota.extra.balanceCents / 100).toFixed(2)}`));
+    }
+    if (!lines.length) return '';
+    return `<div class="ksw-section">
+        <div class="ksw-title">额度</div>
+        ${lines.join('')}
+      </div>`;
   }
 
   function renderCard(snapshot) {
@@ -261,6 +349,7 @@
         ${row('步数 / 回合', `${totals.steps ?? 0} / ${totals.turns ?? 0}`)}
         ${row('工具调用', String(totals.toolCalls ?? 0))}
       </div>
+      ${renderQuotaSection(snapshot.quota)}
       ${agents.length ? `<div class="ksw-section ksw-agents">
         <div class="ksw-title">Agent</div>
         ${agents.map((agent) => row(
@@ -651,9 +740,81 @@
     }
   }
 
+  /** Local snapshots carry quota; API-fallback ones fetch it same-origin. */
+  const QUOTA_TTL = 8000;
+  const quotaCache = { at: 0, value: null };
+
+  function normalizeApiQuota(data) {
+    if (!data || data.kind !== 'ok') return null;
+    const period = (entry) => {
+      if (!entry) return null;
+      const used = Number(entry.used);
+      const limit = Number(entry.limit);
+      const resetAt = Date.parse(entry.reset_at || '');
+      const unitLabels = { minute: 'm', hour: 'h', day: 'd', week: 'd' };
+      const win = entry.window || {};
+      const winDays = win.unit === 'week' ? Number(win.duration) * 7 : Number(win.duration);
+      const unit = win.unit === 'week' ? 'd' : unitLabels[win.unit];
+      return {
+        window: Number.isFinite(winDays) && unit ? `${winDays}${unit}` : '',
+        used: Number.isFinite(used) ? used : null,
+        limit: Number.isFinite(limit) ? limit : null,
+        usedPct: Number.isFinite(used) && Number.isFinite(limit) && limit > 0
+          ? Math.max(0, Math.min(100, (used / limit) * 100))
+          : null,
+        remaining: null,
+        resetAt: Number.isFinite(resetAt) ? resetAt : null,
+      };
+    };
+    return {
+      ok: true,
+      source: 'kimi',
+      fetchedAt: Date.now(),
+      weekly: period(data.summary),
+      windows: Array.isArray(data.limits) ? data.limits.map(period).filter(Boolean) : [],
+      extra: data.extra_usage && Number.isFinite(Number(data.extra_usage.balance_cents))
+        ? { balanceCents: Number(data.extra_usage.balance_cents) }
+        : null,
+    };
+  }
+
+  async function loadQuota(snapshot) {
+    if (snapshot.quota) return;
+    if (quotaCache.value && Date.now() - quotaCache.at < QUOTA_TTL) {
+      snapshot.quota = quotaCache.value;
+      return;
+    }
+    // Route by the session's provider: only the managed kimi-code provider is
+    // queryable from the page (same-origin token); third-party keys live only
+    // in the local service, so other providers get a cached "unsupported".
+    let value = null;
+    try {
+      const catalog = await apiJson(`${API_BASE}/models`).catch(() => null);
+      const items = (catalog && catalog.items) || [];
+      const model = snapshot.headline && snapshot.headline.model;
+      const entry = model ? items.find((item) => item.model === model) : null;
+      const provider = entry && entry.provider;
+      if (provider === 'managed:kimi-code') {
+        const data = await apiJson(`${API_BASE}/oauth/usage`).catch(() => null);
+        value = data ? normalizeApiQuota(data) : null;
+      } else if (provider) {
+        value = { ok: false, reason: 'unsupported', fetchedAt: Date.now() };
+      }
+    } catch {
+      value = null;
+    }
+    if (value) {
+      quotaCache.at = Date.now();
+      quotaCache.value = value;
+    }
+    snapshot.quota = value || quotaCache.value;
+  }
+
   async function poll() {
     try {
-      render(await loadSnapshot(state.sessionId));
+      const snapshot = await loadSnapshot(state.sessionId);
+      await loadQuota(snapshot).catch(() => {});
+      render(snapshot);
     } catch {
       if (!state.sseOpen) renderOffline();
     }
@@ -720,14 +881,28 @@
     connect();
   }
 
+  /** Bar click also forces a quota refresh instead of waiting for the TTL. */
+  function refreshQuotaNow() {
+    quotaCache.at = 0;
+    if (state.source === 'local') {
+      const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+        ? AbortSignal.timeout(2500)
+        : undefined;
+      fetch(`${LOCAL_BASE}/api/quota/refresh`, { method: 'POST', signal }).catch(() => {});
+    }
+    poll();
+  }
+
   bar.addEventListener('click', () => {
     state.expanded = !state.expanded;
+    refreshQuotaNow();
     if (state.snapshot) renderCard(state.snapshot);
   });
   bar.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       state.expanded = !state.expanded;
+      refreshQuotaNow();
       if (state.snapshot) renderCard(state.snapshot);
     }
   });

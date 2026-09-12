@@ -1,6 +1,6 @@
 {
   "name": "kimi-status-web",
-  "version": "0.4.3",
+  "version": "0.5.2",
   "description": "Zero-dependency live web dashboard for Kimi Code sessions: tokens, cache hit rate, throughput and latency.",
   "type": "module",
   "bin": {

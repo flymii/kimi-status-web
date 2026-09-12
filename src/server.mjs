@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { createMetricsHub } from './hub.mjs';
 import { createApiRoutes, corsHeaders, sendText } from './http-api.mjs';
+import { createQuotaProvider } from './quota.mjs';
 import { clearRuntime, pluginVersion, writeRuntime } from './runtime.mjs';
 
 const STATIC_ROUTES = new Map([
@@ -49,7 +50,8 @@ export function serveStatic(paths, res, urlPath, routes = STATIC_ROUTES, extra =
  * recently active session unless the viewer pins one.
  */
 export function createDashboardServer({ paths, config, log = () => {} }) {
-  const hub = createMetricsHub({ paths, config, log, mode: 'dashboard' });
+  const quota = createQuotaProvider({ paths });
+  const hub = createMetricsHub({ paths, config, log, mode: 'dashboard', quota });
   const routes = createApiRoutes({ paths, hub, log });
   let server = null;
   let port = config.port;

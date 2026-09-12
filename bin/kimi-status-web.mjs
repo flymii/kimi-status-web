@@ -6,12 +6,15 @@ import process from 'node:process';
 import { loadConfig } from '../src/config.mjs';
 import {
   formatDuration,
+  formatMoney,
   formatPercent,
   formatRate,
+  formatResetIn,
   formatTokens,
   statusLine,
 } from '../src/format.mjs';
 import { resolvePaths } from '../src/paths.mjs';
+import { fetchQuota } from '../src/quota.mjs';
 import { listSessions, findSession, pickActiveSession } from '../src/session-locator.mjs';
 import { SessionTracker } from '../src/session-tracker.mjs';
 import { createDashboardServer } from '../src/server.mjs';
@@ -80,6 +83,25 @@ function humanSnapshot(snapshot) {
     + `缓存 ${formatPercent(turn.cacheRate)}`);
   lines.push(`本会话  入 ${formatTokens(totals.input)} · 出 ${formatTokens(totals.output)} · `
     + `缓存 ${formatPercent(totals.cacheRate)} · ${totals.steps} 步 · ${totals.turns} 回合`);
+  if (snapshot.quota && snapshot.quota.ok) {
+    const bits = [];
+    if (snapshot.quota.source === 'deepseek') {
+      const balances = (snapshot.quota.balances || [])
+        .map((balance) => `${balance.currency} ${formatMoney(balance)}`);
+      lines.push(`额度    DeepSeek 余额 ${balances.join(' · ') || '—'}`);
+    } else {
+      if (snapshot.quota.weekly) {
+        bits.push(`${snapshot.quota.weekly.window || '7d'} 已用 ${Math.round(snapshot.quota.weekly.usedPct ?? NaN)}% → 重置 ${formatResetIn(snapshot.quota.weekly.resetAt)}`);
+      }
+      for (const window_ of snapshot.quota.windows || []) {
+        bits.push(`${window_.window || '滚动'} 已用 ${Math.round(window_.usedPct ?? NaN)}% → 重置 ${formatResetIn(window_.resetAt)}`);
+      }
+      if (snapshot.quota.extra && Number.isFinite(snapshot.quota.extra.balanceCents)) {
+        bits.push(`加油包 ¥${(snapshot.quota.extra.balanceCents / 100).toFixed(2)}`);
+      }
+      if (bits.length) lines.push(`额度    ${bits.join(' · ')}`);
+    }
+  }
   if (snapshot.tools && snapshot.tools.length) {
     lines.push('');
     lines.push('最近工具调用');
@@ -110,6 +132,7 @@ async function collectSnapshot(paths, sessionId) {
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => setTimeout(resolve, 2));
   }
+  snapshot.quota = await fetchQuota(paths, snapshot.headline?.model).catch(() => null);
   return snapshot;
 }
 

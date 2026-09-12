@@ -3,7 +3,7 @@
 Kimi Code 会话的本地实时状态面板：把终端状态栏搬进浏览器。
 
 ```
-入 197.5k · 出 6.3k · 缓存 76% · ↑39 tok/s · ⚡1.7s
+入 197.5k · 出 6.3k · 缓存 76% · ↑39 tok/s · ⚡1.7s · ⌈7d 已用12% 5d2h · 5h 已用60% 3h9m⌉
 ```
 
 数据直接来自会话日志 `~/.kimi-code/sessions/.../agents/*/wire.jsonl`，只读本地文件，不联网、不改动会话内容；面板只监听 `127.0.0.1`。
@@ -47,7 +47,9 @@ Kimi Code 会话的本地实时状态面板：把终端状态栏搬进浏览器�
 2. 把 `userscript/kimi-status-web.user.js` 整段复制进「添加新脚本」，或用管理器的「实用工具 → 导入文件」直接选它
 3. 刷新 kimi web 页面即可。脚本 `@match *://*/*`，但会在非 kimi web 页面上立即退出，所以局域网 / 反代域名都不用重新生成
 
-点状态条展开：本回合（步数 / 工具 / 首字 / 缓存拆分）、吞吐折线、会话累计、各 agent 明细，底部「完整面板 ↗」跳到独立面板页。整块 UI 跑在 shadow DOM 里并跟随 kimi web 的明暗主题，不会影响宿主页面的样式。
+点状态条展开：本回合（步数 / 工具 / 首字 / 缓存拆分）、吞吐折线、会话累计、额度、各 agent 明细，底部「完整面板 ↗」跳到独立面板页。整块 UI 跑在 shadow DOM 里并跟随 kimi web 的明暗主题，不会影响宿主页面的样式。
+
+额度跟着当前会话用的供应商走（按模型别名路由）：kimi-code 模型显示 7d 周额度与 5h 滚动窗口的剩余比例和重置倒计时（数据来自 kimi web 服务的 `/api/v1/oauth/usage`，用本机 server.token 读取）；DeepSeek 模型显示账户余额（`api.deepseek.com/user/balance`，key 取自 config.toml）；其他供应商（如 ark）没有余额接口，额度区块自动隐藏。本机服务没开、回退到页面 REST API 时，只有 kimi-code 额度可查（页面 token 只管 kimi），DeepSeek 余额需要本机服务在跑。
 
 **数据源两档，自动切换：**
 

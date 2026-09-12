@@ -40,6 +40,38 @@ export function formatClock(ms) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+/** Reset as a compact countdown, e.g. 5h9m / 2d3h. */
+export function formatResetIn(ms) {
+  if (!Number.isFinite(ms)) return '—';
+  const delta = ms - Date.now();
+  if (delta <= 0) return '0m';
+  const minutes = Math.ceil(delta / 60000);
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  if (days > 0) return `${days}d${hours}h`;
+  if (hours > 0) return `${hours}h${mins}m`;
+  return `${mins}m`;
+}
+
+/** The quota period with the least headroom (lowest remaining share). */
+/** The most consumed period (highest used share) — that one hits first. */
+export function tightestQuotaPeriod(quota) {
+  if (!quota || quota.ok !== true || quota.source !== 'kimi') return null;
+  const candidates = [quota.weekly, ...(quota.windows || [])]
+    .filter((item) => item && Number.isFinite(item.usedPct));
+  if (!candidates.length) return null;
+  return candidates.reduce((best, item) => (item.usedPct > best.usedPct ? item : best));
+}
+
+/** Render one balance entry, e.g. ¥12.44 / $5.00. */
+export function formatMoney(balance) {
+  if (!balance || !Number.isFinite(balance.total)) return '—';
+  const symbols = { CNY: '¥', USD: '$' };
+  const symbol = symbols[balance.currency] || `${balance.currency} `;
+  return `${symbol}${balance.total.toFixed(2)}`;
+}
+
 /** The one-line status row, same shape as a terminal status line. */
 export function statusLine(snapshot) {
   const head = snapshot.headline;
@@ -50,5 +82,16 @@ export function statusLine(snapshot) {
     `↑${formatRate(head.tps)} tok/s`,
     `⚡${formatDuration(head.ttftMs)}`,
   ];
+  const quota = snapshot.quota;
+  if (quota && quota.ok) {
+    if (quota.source === 'deepseek') {
+      parts.push(`余额 ${formatMoney(quota.balances && quota.balances[0])}`);
+    } else {
+      const tight = tightestQuotaPeriod(quota);
+      if (tight) {
+        parts.push(`已用 ${Math.round(tight.usedPct)}%`, `重置 ${formatResetIn(tight.resetAt)}`);
+      }
+    }
+  }
   return parts.join(' · ');
 }

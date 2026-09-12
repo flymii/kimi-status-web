@@ -2,7 +2,7 @@
 // @name         Kimi Status Web · kimi web 状态条
 // @name:en      Kimi Status Web
 // @namespace    kimi-status-web
-// @version      0.4.3
+// @version      0.5.2
 // @description  在 kimi web 的消息输入框下面显示实时指标：入/出 token、缓存命中率、tok/s、首字延迟
 // @description:en Live tokens, cache hit rate, throughput and TTFT inside the Kimi Code web UI
 // @author       kimi-status-web
@@ -16,7 +16,7 @@
 // 数据源：优先本机 kimi-status-web 服务（默认 http://127.0.0.1:8710/，换端口用 --port 重新生成），
 // 连不上时自动改用当前页面的 kimi web REST API（同源 + 页面自带 token），所以局域网/反代域名同样可用。
 window.__KIMI_STATUS_BASE = "http://127.0.0.1:8710/_kimi-status";
-window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so nothing here can leak into\n   the host app and nothing from the host app can reach in.\n\n   The bar itself is box-less — plain status text pinned under the message\n   composer. Only the expanded card (opened on click) keeps a panel surface so\n   it stays readable over the chat. */\n\n:host {\n  all: initial;\n  display: block;\n  flex: none;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n/* In flow: the placement code inserts the host as the composer box's next\n   sibling, so the composer above it gets pushed up. Falls back to a fixed\n   corner when the page has no composer. */\n.ksw {\n  --text: #e6edf3;\n  --muted: #8b949e;\n  --dim: #6b7280;\n  --blue: #4fa8ff;\n  --green: #3fb950;\n  --amber: #e8a838;\n  --panel: rgba(17, 21, 29, 0.96);\n  --line: #262d39;\n\n  position: relative;\n  z-index: 3;\n  margin: 6px 0 0 18px;\n  font: 12px/1.45 ui-monospace, SFMono-Regular, \"JetBrains Mono\", Consolas, monospace;\n  color: var(--muted);\n  display: block;\n  max-width: calc(100vw - 24px);\n}\n\n.ksw[data-theme=\"light\"] {\n  --text: #1f2328;\n  --muted: #57606a;\n  --dim: #6e7781;\n  --blue: #0969da;\n  --green: #1a7f37;\n  --amber: #9a6700;\n  --panel: rgba(255, 255, 255, 0.97);\n  --line: #d8dee6;\n}\n\n.ksw-bar {\n  display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  padding: 0;\n  background: none;\n  border: 0;\n  box-shadow: none;\n  color: inherit;\n  cursor: pointer;\n  user-select: none;\n  white-space: nowrap;\n  overflow: hidden;\n  opacity: 0.92;\n}\n\n.ksw-bar:hover {\n  opacity: 1;\n}\n\n.ksw-bar:hover .ksw-chip .value {\n  color: var(--text);\n}\n\n.ksw-dot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dim);\n  flex: none;\n}\n\n.ksw[data-live=\"open\"] .ksw-dot {\n  background: var(--green);\n  box-shadow: 0 0 6px rgba(63, 185, 80, 0.7);\n}\n\n.ksw[data-live=\"closed\"] .ksw-dot {\n  background: var(--amber);\n}\n\n.ksw-chip {\n  display: inline-flex;\n  align-items: baseline;\n  gap: 4px;\n}\n\n.ksw-chip .label {\n  color: var(--dim);\n}\n\n.ksw-chip .value {\n  color: var(--text);\n  font-variant-numeric: tabular-nums;\n}\n\n.ksw-chip.cache .value { color: var(--green); }\n.ksw-chip.tps .value { color: var(--blue); }\n.ksw-chip.tps .unit { color: var(--blue); font-size: 11px; }\n.ksw-chip.ttft .value { color: var(--green); }\n.ksw-sep { color: var(--dim); }\n.ksw-caret { color: var(--dim); }\n\n/* Opens above the composer box (offset set by the placement code) so the panel\n   covers the conversation, never the input area. */\n.ksw-card {\n  position: absolute;\n  bottom: calc(100% + var(--ksw-card-offset, 8px));\n  left: 0;\n  width: min(340px, 100%);\n  max-height: min(60vh, 520px);\n  overflow: auto;\n  padding: 12px 14px;\n  background: var(--panel);\n  border: 1px solid var(--line);\n  border-radius: 12px;\n  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);\n  backdrop-filter: blur(8px);\n  color: var(--text);\n}\n\n.ksw-card[hidden] { display: none; }\n\n.ksw-section + .ksw-section {\n  margin-top: 10px;\n  padding-top: 10px;\n  border-top: 1px solid var(--line);\n}\n\n.ksw-title {\n  color: var(--muted);\n  font-size: 10.5px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  margin-bottom: 6px;\n}\n\n.ksw-row {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 1.5px 0;\n}\n\n.ksw-row .k { color: var(--muted); }\n.ksw-row .v { font-variant-numeric: tabular-nums; text-align: right; }\n.ksw-row .v.good { color: var(--green); }\n.ksw-row .v.info { color: var(--blue); }\n\n.ksw-prompt {\n  margin-top: 8px;\n  padding: 6px 8px;\n  background: rgba(127, 127, 127, 0.1);\n  border-radius: 6px;\n  color: var(--muted);\n  font-size: 11px;\n  max-height: 60px;\n  overflow: hidden;\n}\n\n.ksw-spark {\n  height: 42px;\n  margin: 6px 0 8px;\n}\n\n.ksw-spark svg { width: 100%; height: 100%; display: block; }\n\n.ksw-links {\n  display: flex;\n  gap: 12px;\n  margin-top: 10px;\n  padding-top: 9px;\n  border-top: 1px solid var(--line);\n  font-size: 11px;\n}\n\n.ksw-links a {\n  color: var(--blue);\n  text-decoration: none;\n  cursor: pointer;\n}\n\n.ksw-links a:hover { text-decoration: underline; }\n.ksw-agents { font-size: 11px; }\n.ksw-agents .ksw-row .k { color: var(--text); }\n";
+window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so nothing here can leak into\n   the host app and nothing from the host app can reach in.\n\n   The bar itself is box-less — plain status text pinned under the message\n   composer. Only the expanded card (opened on click) keeps a panel surface so\n   it stays readable over the chat. */\n\n:host {\n  all: initial;\n  display: block;\n  flex: none;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n/* In flow: the placement code inserts the host as the composer box's next\n   sibling, so the composer above it gets pushed up. Falls back to a fixed\n   corner when the page has no composer. */\n.ksw {\n  --text: #e6edf3;\n  --muted: #8b949e;\n  --dim: #6b7280;\n  --blue: #4fa8ff;\n  --green: #3fb950;\n  --amber: #e8a838;\n  --panel: rgba(17, 21, 29, 0.96);\n  --line: #262d39;\n\n  position: relative;\n  z-index: 3;\n  margin: 6px 0 0 18px;\n  font: 12px/1.45 ui-monospace, SFMono-Regular, \"JetBrains Mono\", Consolas, monospace;\n  color: var(--muted);\n  display: block;\n  max-width: calc(100vw - 24px);\n}\n\n.ksw[data-theme=\"light\"] {\n  --text: #1f2328;\n  --muted: #57606a;\n  --dim: #6e7781;\n  --blue: #0969da;\n  --green: #1a7f37;\n  --amber: #9a6700;\n  --panel: rgba(255, 255, 255, 0.97);\n  --line: #d8dee6;\n}\n\n.ksw-bar {\n  display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  padding: 0;\n  background: none;\n  border: 0;\n  box-shadow: none;\n  color: inherit;\n  cursor: pointer;\n  user-select: none;\n  white-space: nowrap;\n  overflow: hidden;\n  opacity: 0.92;\n}\n\n.ksw-bar:hover {\n  opacity: 1;\n}\n\n.ksw-bar:hover .ksw-chip .value {\n  color: var(--text);\n}\n\n.ksw-dot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dim);\n  flex: none;\n}\n\n.ksw[data-live=\"open\"] .ksw-dot {\n  background: var(--green);\n  box-shadow: 0 0 6px rgba(63, 185, 80, 0.7);\n}\n\n.ksw[data-live=\"closed\"] .ksw-dot {\n  background: var(--amber);\n}\n\n.ksw-chip {\n  display: inline-flex;\n  align-items: baseline;\n  gap: 4px;\n}\n\n.ksw-chip .label {\n  color: var(--dim);\n}\n\n.ksw-chip .value {\n  color: var(--text);\n  font-variant-numeric: tabular-nums;\n}\n\n.ksw-chip.cache .value { color: var(--green); }\n.ksw-chip.tps .value { color: var(--blue); }\n.ksw-chip.tps .unit { color: var(--blue); font-size: 11px; }\n.ksw-chip.ttft .value { color: var(--green); }\n.ksw-sep { color: var(--dim); }\n.ksw-caret { color: var(--dim); }\n\n/* Quota is account-level, not session metrics: box it off so it reads apart. */\n.ksw-quota-group {\n  display: inline-flex;\n  align-items: baseline;\n  gap: 6px;\n  margin-left: 6px;\n  padding: 2px 8px;\n  border: 1px solid var(--line);\n  border-radius: 999px;\n  background: rgba(127, 127, 127, 0.08);\n}\n\n/* One quota window inside the pill: \"7d 88% 5d2h\". */\n.ksw-q {\n  display: inline-flex;\n  align-items: baseline;\n  gap: 3px;\n  white-space: nowrap;\n}\n\n.ksw-q .k { color: var(--dim); }\n.ksw-q .v { color: var(--text); font-variant-numeric: tabular-nums; }\n.ksw-q .v.warn { color: var(--amber); }\n.ksw-q .r { color: var(--dim); font-size: 10.5px; font-variant-numeric: tabular-nums; }\n\n/* Opens above the composer box (offset set by the placement code) so the panel\n   covers the conversation, never the input area. */\n.ksw-card {\n  position: absolute;\n  bottom: calc(100% + var(--ksw-card-offset, 8px));\n  left: 0;\n  width: min(340px, 100%);\n  max-height: min(60vh, 520px);\n  overflow: auto;\n  padding: 12px 14px;\n  background: var(--panel);\n  border: 1px solid var(--line);\n  border-radius: 12px;\n  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);\n  backdrop-filter: blur(8px);\n  color: var(--text);\n}\n\n.ksw-card[hidden] { display: none; }\n\n.ksw-section + .ksw-section {\n  margin-top: 10px;\n  padding-top: 10px;\n  border-top: 1px solid var(--line);\n}\n\n.ksw-title {\n  color: var(--muted);\n  font-size: 10.5px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  margin-bottom: 6px;\n}\n\n.ksw-row {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 1.5px 0;\n}\n\n.ksw-row .k { color: var(--muted); }\n.ksw-row .v { font-variant-numeric: tabular-nums; text-align: right; }\n.ksw-row .v.good { color: var(--green); }\n.ksw-row .v.info { color: var(--blue); }\n.ksw-row .v.warn { color: var(--amber); }\n\n.ksw-chip.warn .value { color: var(--amber); }\n\n.ksw-prompt {\n  margin-top: 8px;\n  padding: 6px 8px;\n  background: rgba(127, 127, 127, 0.1);\n  border-radius: 6px;\n  color: var(--muted);\n  font-size: 11px;\n  max-height: 60px;\n  overflow: hidden;\n}\n\n.ksw-spark {\n  height: 42px;\n  margin: 6px 0 8px;\n}\n\n.ksw-spark svg { width: 100%; height: 100%; display: block; }\n\n.ksw-links {\n  display: flex;\n  gap: 12px;\n  margin-top: 10px;\n  padding-top: 9px;\n  border-top: 1px solid var(--line);\n  font-size: 11px;\n}\n\n.ksw-links a {\n  color: var(--blue);\n  text-decoration: none;\n  cursor: pointer;\n}\n\n.ksw-links a:hover { text-decoration: underline; }\n.ksw-agents { font-size: 11px; }\n.ksw-agents .ksw-row .k { color: var(--text); }\n";
 
 // The status bar that lives inside the Kimi Code web UI, delivered as a
 // userscript. It renders in a shadow root so it cannot disturb (or be disturbed
@@ -137,6 +137,26 @@ window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so n
     const minutes = Math.floor(ms / 60000);
     return `${minutes}m${String(Math.round((ms % 60000) / 1000)).padStart(2, '0')}s`;
   };
+  const fmtResetIn = (ms) => {
+    if (!Number.isFinite(ms)) return '—';
+    const delta = ms - Date.now();
+    if (delta <= 0) return '0m';
+    const minutes = Math.ceil(delta / 60000);
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    const mins = minutes % 60;
+    if (days > 0) return `${days}d${hours}h`;
+    if (hours > 0) return `${hours}h${mins}m`;
+    return `${mins}m`;
+  };
+  const quotaCls = (usedPct) => (Number.isFinite(usedPct) && usedPct >= 75 ? 'warn' : '');
+  const fmtPct = (value) => (Number.isFinite(value) ? `${Math.round(value)}%` : '—');
+  const fmtMoney = (balance) => {
+    if (!balance || !Number.isFinite(balance.total)) return '—';
+    const symbols = { CNY: '¥', USD: '$' };
+    const symbol = symbols[balance.currency] || `${balance.currency} `;
+    return `${symbol}${balance.total.toFixed(2)}`;
+  };
   const chip = (label, value, className = '', unit = '') => `<span class="ksw-chip ${className}">`
     + `<span class="label">${esc(label)}</span><span class="value">${esc(value)}</span>`
     + (unit ? `<span class="unit">${esc(unit)}</span>` : '')
@@ -186,15 +206,53 @@ window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so n
       chip('↑', fmtRate(head.tps), 'tps', 'tok/s'),
       chip('⚡', fmtDuration(head.ttftMs), 'ttft'),
     ];
+    const quota = snapshot.quota;
+    if (quota && quota.ok === true) {
+      if (quota.source === 'deepseek') {
+        parts.push('<span class="ksw-quota-group">'
+          + chip('余额', fmtMoney(quota.balances && quota.balances[0]))
+          + '</span>');
+      } else {
+        // Every window gets its own sub-block: window label, remaining share,
+        // reset countdown — e.g. "7d 88% 5d2h · 5h 41% 1h9m".
+        const qGroup = (label, usedPct, resetAt) => `<span class="ksw-q">${esc(label)}`
+          + ` <span class="v ${quotaCls(usedPct)}">${fmtPct(usedPct)}</span>`
+          + ` <span class="r">${fmtResetIn(resetAt)}</span></span>`;
+        const groups = [];
+        if (quota.weekly) groups.push(qGroup(quota.weekly.window || '7d', quota.weekly.usedPct, quota.weekly.resetAt));
+        for (const window_ of quota.windows || []) {
+          groups.push(qGroup(window_.window || '滚动', window_.usedPct, window_.resetAt));
+        }
+        if (groups.length) {
+          parts.push('<span class="ksw-quota-group">'
+            + groups.join('<span class="ksw-sep">·</span>')
+            + '</span>');
+        }
+      }
+    }
     chips.innerHTML = parts.join('<span class="ksw-sep">·</span>');
     const cacheLine = Number.isFinite(head.cacheRate)
       ? `缓存命中 ${fmtPercent(head.cacheRate)}：缓存读 ${fmtTokens(head.cacheRead)} / 输入 ${fmtTokens(head.input)}，未缓存 ${fmtTokens(head.inputOther)}`
       : '';
+    const quotaLines = quota && quota.ok === true
+      ? (quota.source === 'deepseek'
+        ? (quota.balances || []).map((balance) =>
+          `DeepSeek ${balance.currency} 余额 ${fmtMoney(balance)}`)
+        : [
+          quota.weekly ? `${quota.weekly.window || '7d'}额度 已用 ${fmtPct(quota.weekly.usedPct)} · 重置 ${fmtResetIn(quota.weekly.resetAt)}` : '',
+          ...(quota.windows || []).map((window_) =>
+            `${window_.window || '滚动'}窗口 已用 ${fmtPct(window_.usedPct)} · 重置 ${fmtResetIn(window_.resetAt)}`),
+          quota.extra && Number.isFinite(quota.extra.balanceCents)
+            ? `加油包 ¥${(quota.extra.balanceCents / 100).toFixed(2)}`
+            : '',
+        ].filter(Boolean))
+      : [];
     bar.title = [
       snapshot.session.title || snapshot.session.id,
       snapshot.session.cwd || '',
       `模型 ${head.model || '—'} · 上下文 ${fmtTokens(head.contextTokens)}`,
       cacheLine,
+      ...quotaLines,
     ].filter(Boolean).join('\n');
   }
 
@@ -217,6 +275,36 @@ window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so n
   function row(key, value, cls = '') {
     return `<div class="ksw-row"><span class="k">${esc(key)}</span>`
       + `<span class="v ${cls}">${esc(value)}</span></div>`;
+  }
+
+  function renderQuotaSection(quota) {
+    if (!quota || quota.ok !== true) return '';
+    if (quota.source === 'deepseek') {
+      const lines = (quota.balances || []).map((balance) => row(balance.currency, fmtMoney(balance)));
+      if (quota.available === false) lines.unshift(row('状态', '不可用', 'warn'));
+      if (!lines.length) return '';
+      return `<div class="ksw-section">
+        <div class="ksw-title">DeepSeek 余额</div>
+        ${lines.join('')}
+      </div>`;
+    }
+    const lines = [];
+    if (quota.weekly) {
+      lines.push(row(`${quota.weekly.window || '7d'}额度`, `已用 ${fmtPct(quota.weekly.usedPct)}`, quotaCls(quota.weekly.usedPct)));
+      lines.push(row('重置', fmtResetIn(quota.weekly.resetAt)));
+    }
+    for (const window_ of quota.windows || []) {
+      lines.push(row(`${window_.window || '滚动'}窗口`, `已用 ${fmtPct(window_.usedPct)}`, quotaCls(window_.usedPct)));
+      lines.push(row('重置', fmtResetIn(window_.resetAt)));
+    }
+    if (quota.extra && Number.isFinite(quota.extra.balanceCents)) {
+      lines.push(row('加油包', `¥${(quota.extra.balanceCents / 100).toFixed(2)}`));
+    }
+    if (!lines.length) return '';
+    return `<div class="ksw-section">
+        <div class="ksw-title">额度</div>
+        ${lines.join('')}
+      </div>`;
   }
 
   function renderCard(snapshot) {
@@ -281,6 +369,7 @@ window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so n
         ${row('步数 / 回合', `${totals.steps ?? 0} / ${totals.turns ?? 0}`)}
         ${row('工具调用', String(totals.toolCalls ?? 0))}
       </div>
+      ${renderQuotaSection(snapshot.quota)}
       ${agents.length ? `<div class="ksw-section ksw-agents">
         <div class="ksw-title">Agent</div>
         ${agents.map((agent) => row(
@@ -671,9 +760,81 @@ window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so n
     }
   }
 
+  /** Local snapshots carry quota; API-fallback ones fetch it same-origin. */
+  const QUOTA_TTL = 8000;
+  const quotaCache = { at: 0, value: null };
+
+  function normalizeApiQuota(data) {
+    if (!data || data.kind !== 'ok') return null;
+    const period = (entry) => {
+      if (!entry) return null;
+      const used = Number(entry.used);
+      const limit = Number(entry.limit);
+      const resetAt = Date.parse(entry.reset_at || '');
+      const unitLabels = { minute: 'm', hour: 'h', day: 'd', week: 'd' };
+      const win = entry.window || {};
+      const winDays = win.unit === 'week' ? Number(win.duration) * 7 : Number(win.duration);
+      const unit = win.unit === 'week' ? 'd' : unitLabels[win.unit];
+      return {
+        window: Number.isFinite(winDays) && unit ? `${winDays}${unit}` : '',
+        used: Number.isFinite(used) ? used : null,
+        limit: Number.isFinite(limit) ? limit : null,
+        usedPct: Number.isFinite(used) && Number.isFinite(limit) && limit > 0
+          ? Math.max(0, Math.min(100, (used / limit) * 100))
+          : null,
+        remaining: null,
+        resetAt: Number.isFinite(resetAt) ? resetAt : null,
+      };
+    };
+    return {
+      ok: true,
+      source: 'kimi',
+      fetchedAt: Date.now(),
+      weekly: period(data.summary),
+      windows: Array.isArray(data.limits) ? data.limits.map(period).filter(Boolean) : [],
+      extra: data.extra_usage && Number.isFinite(Number(data.extra_usage.balance_cents))
+        ? { balanceCents: Number(data.extra_usage.balance_cents) }
+        : null,
+    };
+  }
+
+  async function loadQuota(snapshot) {
+    if (snapshot.quota) return;
+    if (quotaCache.value && Date.now() - quotaCache.at < QUOTA_TTL) {
+      snapshot.quota = quotaCache.value;
+      return;
+    }
+    // Route by the session's provider: only the managed kimi-code provider is
+    // queryable from the page (same-origin token); third-party keys live only
+    // in the local service, so other providers get a cached "unsupported".
+    let value = null;
+    try {
+      const catalog = await apiJson(`${API_BASE}/models`).catch(() => null);
+      const items = (catalog && catalog.items) || [];
+      const model = snapshot.headline && snapshot.headline.model;
+      const entry = model ? items.find((item) => item.model === model) : null;
+      const provider = entry && entry.provider;
+      if (provider === 'managed:kimi-code') {
+        const data = await apiJson(`${API_BASE}/oauth/usage`).catch(() => null);
+        value = data ? normalizeApiQuota(data) : null;
+      } else if (provider) {
+        value = { ok: false, reason: 'unsupported', fetchedAt: Date.now() };
+      }
+    } catch {
+      value = null;
+    }
+    if (value) {
+      quotaCache.at = Date.now();
+      quotaCache.value = value;
+    }
+    snapshot.quota = value || quotaCache.value;
+  }
+
   async function poll() {
     try {
-      render(await loadSnapshot(state.sessionId));
+      const snapshot = await loadSnapshot(state.sessionId);
+      await loadQuota(snapshot).catch(() => {});
+      render(snapshot);
     } catch {
       if (!state.sseOpen) renderOffline();
     }
@@ -740,14 +901,28 @@ window.__KIMI_STATUS_CSS = "/* Overlay styles. Loaded inside a shadow root, so n
     connect();
   }
 
+  /** Bar click also forces a quota refresh instead of waiting for the TTL. */
+  function refreshQuotaNow() {
+    quotaCache.at = 0;
+    if (state.source === 'local') {
+      const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+        ? AbortSignal.timeout(2500)
+        : undefined;
+      fetch(`${LOCAL_BASE}/api/quota/refresh`, { method: 'POST', signal }).catch(() => {});
+    }
+    poll();
+  }
+
   bar.addEventListener('click', () => {
     state.expanded = !state.expanded;
+    refreshQuotaNow();
     if (state.snapshot) renderCard(state.snapshot);
   });
   bar.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       state.expanded = !state.expanded;
+      refreshQuotaNow();
       if (state.snapshot) renderCard(state.snapshot);
     }
   });

@@ -111,6 +111,31 @@
 .ksw-sep { color: var(--dim); }
 .ksw-caret { color: var(--dim); }
 
+/* Quota is account-level, not session metrics: box it off so it reads apart. */
+.ksw-quota-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.08);
+}
+
+/* One quota window inside the pill: "7d 88% 5d2h". */
+.ksw-q {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.ksw-q .k { color: var(--dim); }
+.ksw-q .v { color: var(--text); font-variant-numeric: tabular-nums; }
+.ksw-q .v.warn { color: var(--amber); }
+.ksw-q .r { color: var(--dim); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+
 /* Opens above the composer box (offset set by the placement code) so the panel
    covers the conversation, never the input area. */
 .ksw-card {
@@ -156,6 +181,9 @@
 .ksw-row .v { font-variant-numeric: tabular-nums; text-align: right; }
 .ksw-row .v.good { color: var(--green); }
 .ksw-row .v.info { color: var(--blue); }
+.ksw-row .v.warn { color: var(--amber); }
+
+.ksw-chip.warn .value { color: var(--amber); }
 
 .ksw-prompt {
   margin-top: 8px;
