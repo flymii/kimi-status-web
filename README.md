@@ -29,7 +29,7 @@ Kimi Code 会话的本地实时状态面板：把终端状态栏搬进浏览器�
 
 也可以直接从本地目录安装：`/plugins install <插件目录路径>`。
 
-安装后执行 `/reload` 或 `/new` 生效。启用后，每次会话开始时会自动在后台拉起指标服务（可用 `config.json` 里的 `autoStart: false` 关掉）。
+安装后执行 `/reload` 或 `/new` 生效。**默认不启动任何后台服务** —— 状态条自带数据源（走 kimi web 的 REST API）；想看更全的数据（子 agent、本回合耗时、按模型统计、完整面板页）时再手动起服务：`/kimi-status-web:open`，或把 `config.json` 里的 `autoStart` 设为 `true` 让它随会话自动拉起。
 
 ## 使用
 
@@ -45,17 +45,28 @@ Kimi Code 会话的本地实时状态面板：把终端状态栏搬进浏览器�
 
 1. 装一个用户脚本管理器（Tampermonkey / Violentmonkey）
 2. 把 `userscript/kimi-status-web.user.js` 整段复制进「添加新脚本」，或用管理器的「实用工具 → 导入文件」直接选它
-3. 刷新 kimi web 页面即可（脚本 `@match http://127.0.0.1/*`，端口变了也不用改）
+3. 刷新 kimi web 页面即可。脚本 `@match *://*/*`，但会在非 kimi web 页面上立即退出，所以局域网 / 反代域名都不用重新生成
 
 点状态条展开：本回合（步数 / 工具 / 首字 / 缓存拆分）、吞吐折线、会话累计、各 agent 明细，底部「完整面板 ↗」跳到独立面板页。整块 UI 跑在 shadow DOM 里并跟随 kimi web 的明暗主题，不会影响宿主页面的样式。
 
-数据来自本机 8710 的 kimi-status-web 服务，所以那个服务要在跑（`status` 查看、`open` 启动）。换端口后重新生成即可：
+**数据源两档，自动切换：**
+
+1. **本机指标服务**（优先）—— 直接读 `~/.kimi-code/sessions` 下的日志，不需要 token，增量读、开销最小；也就是 `kimi-status-web serve` 那个 8710 服务（`status` 查看、`open` 启动）
+2. **kimi web 自己的 REST API**（回退）—— 本机服务连不上时，改用**同源**接口：`/api/v1/sessions/<id>/snapshot` 取会话用量汇总，`/api/v1/fs:content`（带 `Range`）读 `session_index.jsonl` 和 `wire.jsonl` 尾部算 tok/s、首字延迟。token 取自页面自己存的 `kimi-web.server-credential`，所以**通过局域网 IP 或反向代理域名访问 kimi web 时同样可用**，只是面板里的步数/工具统计受尾部窗口限制（面板会标注「日志尾部」）
+
+换本机服务端口后重新生成即可：
 
 ```bash
 node scripts/build-userscript.mjs --port 8712
 ```
 
-生成器把 `web/overlay.js` 和 `web/overlay.css` 一起内联进 `.user.js`，状态条只有一份源码。API 只对 `127.0.0.1` / `localhost` 来源开放跨域读写，其它网站拿不到你的会话数据。调试时在地址后加 `?ksw_poll=1`（改轮询）或 `?ksw_open=1`（默认展开）。
+只想让脚本在特定站点跑（默认是全网 + 运行时判断）时加 `--match`，可重复：
+
+```bash
+node scripts/build-userscript.mjs --match "https://km.example.com/*" --match "http://127.0.0.1/*"
+```
+
+生成器把 `web/overlay.js` 和 `web/overlay.css` 一起内联进 `.user.js`，状态条只有一份源码。本机服务的 API 只对 `127.0.0.1` / `localhost` 来源开放跨域读写，其它网站拿不到你的会话数据。调试时在地址后加 `?ksw_poll=1`（改轮询）或 `?ksw_open=1`（默认展开）。
 
 命令行直接用法：
 
@@ -92,14 +103,16 @@ node bin/kimi-status-web.mjs sessions        # 最近的会话
 ```json
 {
   "port": 8710,
-  "autoStart": true,
+  "autoStart": false,
   "openBrowser": false,
   "tickMs": 700,
   "keepSessions": 6
 }
 ```
 
-`autoStart` 控制会话开始时是否自动拉起指标服务（面板和油猴脚本读的是同一个服务）。
+`autoStart` 默认 **false**：服务不随会话自动启动，需要时手动起（`node bin/kimi-status-web.mjs open` 或 `/kimi-status-web:open`）。设为 `true` 则每次会话开始时自动在后台拉起。
+
+服务不开着也能用 —— 状态条会自动改用 kimi web 自己的 REST API（见上一节），只是少几项明细（子 agent、本回合耗时、按模型统计、完整面板页）。
 
 环境变量：`KIMI_CODE_HOME`（Kimi Code 数据目录）、`KIMI_STATUS_WEB_HOME`（本工具数据目录）、`KIMI_STATUS_WEB_PORT`（默认端口）。
 

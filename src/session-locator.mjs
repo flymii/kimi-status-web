@@ -154,9 +154,55 @@ export function listSessions(paths, { limit = MAX_SESSIONS, force = false } = {}
 
 export function findSession(paths, sessionId) {
   if (!sessionId) return null;
-  const wanted = String(sessionId);
+  const raw = String(sessionId);
+  // The web UI spells session ids with or without a prefix (session_x / ses_x),
+  // so accept every spelling instead of failing the lookup.
+  let bare = raw;
+  for (const prefix of ['session_', 'ses_']) {
+    if (bare.startsWith(prefix)) {
+      bare = bare.slice(prefix.length);
+      break;
+    }
+  }
+  const candidates = [...new Set([raw, `session_${bare}`, `ses_${bare}`, bare])];
   const all = listSessions(paths, { limit: Number.MAX_SAFE_INTEGER });
-  return all.find((s) => s.id === wanted || s.dir === wanted) || null;
+  const hit = all.find((s) => candidates.includes(s.id) || candidates.includes(s.dir));
+  if (hit) return hit;
+  return scanForSession(paths, candidates);
+}
+
+/** Direct directory lookup, for sessions the index tail no longer covers. */
+function scanForSession(paths, candidates) {
+  let wdNames = [];
+  try {
+    wdNames = fs.readdirSync(paths.sessionsRoot);
+  } catch {
+    return null;
+  }
+  for (const wd of wdNames) {
+    for (const name of candidates) {
+      const dir = path.join(paths.sessionsRoot, wd, name);
+      try {
+        if (!fs.statSync(dir).isDirectory()) continue;
+      } catch {
+        continue;
+      }
+      const { state, mtimeMs } = readSessionMeta(dir);
+      const wires = wirePaths(dir);
+      return {
+        id: (state && state.id) || name,
+        dir,
+        cwd: (state && state.cwd) || '',
+        title: state && typeof state.title === 'string' ? state.title : '',
+        updatedAt: state && Number.isFinite(state.updatedAt) ? state.updatedAt : mtimeMs,
+        activityAt: Math.max(mtimeMs, newestMtime(wires)),
+        archived: Boolean(state && state.archived),
+        agentCount: state && state.agents ? Object.keys(state.agents).length : wires.length,
+        wireCount: wires.length,
+      };
+    }
+  }
+  return null;
 }
 
 /** The session the dashboard follows when the viewer has not pinned one. */

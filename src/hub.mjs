@@ -42,7 +42,17 @@ export function createMetricsHub({ paths, config, log = () => {}, mode = 'dashbo
         return active ? trackerFor(active) : null;
       }
       const session = findSession(paths, wanted);
-      return session ? trackerFor(session) : null;
+      if (session) return trackerFor(session);
+      if (wanted === followedId) {
+        // The follow target went stale (archived or gone): recover by following
+        // the newest session again instead of blanking every client.
+        followedId = null;
+        const active = pickActiveSession(paths);
+        return active ? trackerFor(active) : null;
+      }
+      // An explicit request for an unknown id is answered honestly as "empty",
+      // so callers can tell that id apart from a working one.
+      return null;
     } catch (error) {
       log(`session resolve failed: ${error && error.message}`);
       return null;

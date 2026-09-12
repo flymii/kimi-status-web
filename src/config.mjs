@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 export const DEFAULT_CONFIG = {
   port: 8710,
-  autoStart: true,
+  autoStart: false,
   openBrowser: false,
   tickMs: 700,
   follow: 'auto',
@@ -24,7 +24,9 @@ export function normalizeConfig(raw) {
   if (!raw || typeof raw !== 'object') return config;
   config.port = cleanPort(raw.port);
   config.tickMs = cleanTick(raw.tickMs);
-  config.autoStart = raw.autoStart !== false;
+  // Opt-in: the service is started by hand (`open`) unless the user asks for it
+  // to come up with every session.
+  config.autoStart = raw.autoStart === true;
   config.openBrowser = raw.openBrowser === true;
   config.follow = typeof raw.follow === 'string' && raw.follow ? raw.follow : 'auto';
   const keep = Number(raw.keepSessions);

@@ -1,7 +1,7 @@
 {
   "$schema": "https://kimi.com/schemas/kimi.plugin.schema.json",
   "name": "kimi-status-web",
-  "version": "0.3.1",
+  "version": "0.4.3",
   "description": "Kimi Code 会话的本地 Web 实时状态面板：入/出 token、缓存命中率、吞吐 (tok/s)、首字延迟，随会话日志实时刷新。",
   "keywords": [
     "kimi-code",

@@ -17,7 +17,11 @@ export function formatRate(value) {
 
 export function formatPercent(rate) {
   if (!Number.isFinite(rate)) return '—';
-  return `${Math.round(rate * 100)}%`;
+  const pct = Math.max(0, Math.min(1, rate)) * 100;
+  if (pct >= 99.95 && pct < 100) return '>99.9%';
+  if (pct >= 99 && pct < 100) return `${pct.toFixed(1)}%`;
+  if (pct > 0 && pct < 0.1) return '<0.1%';
+  return `${Math.round(pct)}%`;
 }
 
 export function formatDuration(ms) {
